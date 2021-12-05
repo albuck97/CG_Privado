@@ -25,15 +25,15 @@
         <canvas id="c"></canvas>
     </body>
 
-    <!--<script id="vs-back" type="notjs">
-        attribute vec4 a_position;
+    <script id="vs-b" type="notjs">
+        attribute vec4 position;
         varying vec4 v_position;
         void main() {
-          v_position = a_position;
-          gl_Position = a_position;
+          v_position = position;
+          gl_Position = vec4(position.xy, 1,1);
         }
     </script>
-    <script id="fs-back" type="notjs">
+    <script id="fs-b" type="notjs">
         precision mediump float;
         
         uniform samplerCube u_skybox;
@@ -46,7 +46,7 @@
               u_skybox,
               normalize(t.xyz / t.w));
         }
-    </script>-->
+    </script>
 
     <script id="vs" type="notjs">
         uniform mat4 u_worldViewProjection;     
@@ -121,7 +121,11 @@
 
         const objects = [];
         const drawObjects = [];
-        const numObjects = 3;
+        const numObjects = 4;
+
+        const viewDirection = m4.identity();
+        const viewDirectionProjection = m4.identity();
+        const viewDirectionProjectionInverse = m4.identity();
 
         for(let i = 0; i < numObjects; i++){
             var programInfo;
@@ -209,12 +213,12 @@
                 var y = 0.01;
                 var z = 0;
             }
-            /*if(i == 3){
+            if(i == 3){
                 id = "background";
-                programInfo = twgl.createProgramInfo(gl, ["vs-back", "fs-back"]);
+                programInfo = twgl.createProgramInfo(gl, ["vs-b", "fs-b"]);
                 bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
 
-                uniforms_b = {
+                uniforms = {
                     u_skybox: twgl.createTexture(gl, {
                         target: gl.TEXTURE_CUBE_MAP,
                         src: [
@@ -226,13 +230,13 @@
                         'negz.jpg',
                         ],
                     }),
+                    
                     u_viewDirectionProjectionInverse: viewDirectionProjectionInverse,
                 };
-                uniforms = uniforms_b
                 var t = [0,0,0];
                 var y = 0;
                 var z = 0;
-            }*/
+            }
 
             drawObjects.push({
                 programInfo: programInfo,
@@ -249,7 +253,7 @@
         };   
 
 
-        gl.clearColor(0.1, 0.1, 0.1, 1);  // backgrounds
+        //gl.clearColor(0.1, 0.1, 0.1, 1);  // backgrounds
 
         function render(time) {
             time *= 0.001;
@@ -283,11 +287,20 @@
 
             objects.forEach(function(obj) {
                 if(obj.ID == "background"){
+                    //depth test thingy (?)
+                    gl.depthFunc(gl.LEQUAL);
+
                     const uni = obj.uniforms;
                     const world = uni.u_world;
+
+                    m4.setTranslation(view, [0, 0, 0], viewDirection);
+                    m4.multiply(projection, viewDirection, viewDirectionProjection);
                     m4.inverse(viewDirectionProjection, viewDirectionProjectionInverse);
                 }
                 else{
+                    //depth test thingy (?)
+                    gl.depthFunc(gl.LESS);
+
                     const uni = obj.uniforms;
                     const world = uni.u_world;
                     m4.identity(world);
