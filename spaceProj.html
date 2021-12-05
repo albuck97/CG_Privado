@@ -25,6 +25,29 @@
         <canvas id="c"></canvas>
     </body>
 
+    <!--<script id="vs-back" type="notjs">
+        attribute vec4 a_position;
+        varying vec4 v_position;
+        void main() {
+          v_position = a_position;
+          gl_Position = a_position;
+        }
+    </script>
+    <script id="fs-back" type="notjs">
+        precision mediump float;
+        
+        uniform samplerCube u_skybox;
+        uniform mat4 u_viewDirectionProjectionInverse;
+        
+        varying vec4 v_position;
+        void main() {
+          vec4 t = u_viewDirectionProjectionInverse * v_position;
+          gl_FragColor = textureCube(
+              u_skybox,
+              normalize(t.xyz / t.w));
+        }
+    </script>-->
+
     <script id="vs" type="notjs">
         uniform mat4 u_worldViewProjection;     
 
@@ -186,6 +209,30 @@
                 var y = 0.01;
                 var z = 0;
             }
+            /*if(i == 3){
+                id = "background";
+                programInfo = twgl.createProgramInfo(gl, ["vs-back", "fs-back"]);
+                bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
+
+                uniforms_b = {
+                    u_skybox: twgl.createTexture(gl, {
+                        target: gl.TEXTURE_CUBE_MAP,
+                        src: [
+                        'images/niagarafalls2s/posx.jpg',
+                        'images/niagarafalls2s/negx.jpg',
+                        'images/niagarafalls2s/posy.jpg',
+                        'images/niagarafalls2s/negy.jpg',
+                        'images/niagarafalls2s/posz.jpg',
+                        'images/niagarafalls2s/negz.jpg',
+                        ],
+                    }),
+                    u_viewDirectionProjectionInverse: viewDirectionProjectionInverse,
+                };
+                uniforms = uniforms_b
+                var t = [0,0,0];
+                var y = 0;
+                var z = 0;
+            }*/
 
             drawObjects.push({
                 programInfo: programInfo,
@@ -235,23 +282,30 @@
             uniforms.u_worldViewProjection = m4.multiply(viewProjection, world);*/
 
             objects.forEach(function(obj) {
-                const uni = obj.uniforms;
-                const world = uni.u_world;
-                m4.identity(world);
-                m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
-                m4.translate(world, obj.translation, world);//position
-                if (obj.ID == "earth"){
-                    m4.rotateZ(world, .2, world);//earth's weird angle
-                    m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
+                if(obj.ID == "background"){
+                    const uni = obj.uniforms;
+                    const world = uni.u_world;
+                    m4.inverse(viewDirectionProjection, viewDirectionProjectionInverse);
                 }
-                if (obj.ID == "moon"){//this makes the moon's orbit around earth
-                    m4.rotateY(world, time * obj.ySpeed * 25, world);
-                    m4.translate(world, [.3,0,0], world);
+                else{
+                    const uni = obj.uniforms;
+                    const world = uni.u_world;
+                    m4.identity(world);
+                    m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
+                    m4.translate(world, obj.translation, world);//position
+                    if (obj.ID == "earth"){
+                        m4.rotateZ(world, .2, world);//earth's weird angle
+                        m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
+                    }
+                    if (obj.ID == "moon"){//this makes the moon's orbit around earth
+                        m4.rotateY(world, time * obj.ySpeed * 25, world);
+                        m4.translate(world, [.3,0,0], world);
+                    }
+                    m4.rotateZ(world, time * obj.zSpeed, world);
+                    //m4.rotateX(world, time, world);
+                    m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
+                    m4.multiply(viewProjection, uni.u_world, uni.u_worldViewProjection);
                 }
-                m4.rotateZ(world, time * obj.zSpeed, world);
-                //m4.rotateX(world, time, world);
-                m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
-                m4.multiply(viewProjection, uni.u_world, uni.u_worldViewProjection);
             });
 
             twgl.drawObjectList(gl, drawObjects);
