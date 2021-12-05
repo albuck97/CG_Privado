@@ -1,0 +1,265 @@
+<html>
+    <head>
+        <meta charset="utf8">
+        <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #b {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 2;
+        }
+        </style>
+        <script src="/Proj_2/twgl.js-master/dist/4.x/twgl-full.js"></script>
+    </head>
+    <body>
+        <canvas id="c"></canvas>
+    </body>
+
+    <script id="vs" type="notjs">
+        uniform mat4 u_worldViewProjection;     
+
+        uniform vec3 u_lightWorldPos;
+        uniform mat4 u_world;
+        uniform mat4 u_viewInverse;
+        uniform mat4 u_worldInverseTranspose;
+
+        attribute vec4 position;
+        attribute vec3 normal;
+        attribute vec2 texcoord;
+
+        varying vec4 v_position;
+        varying vec2 v_texCoord;
+        varying vec3 v_normal;
+        varying vec3 v_surfaceToLight;
+        varying vec3 v_surfaceToView;
+
+        void main() {
+            v_texCoord = texcoord;
+            v_position = u_worldViewProjection * position;
+            v_normal = (u_worldInverseTranspose * vec4(normal, 0)).xyz;
+            v_surfaceToLight = u_lightWorldPos - (u_world * position).xyz;
+            v_surfaceToView = (u_viewInverse[3] - (u_world * position)).xyz;
+            gl_Position = v_position;
+        }
+    </script>
+    <script id="fs" type="notjs">
+        precision mediump float;
+
+        varying vec2 v_texCoord;
+        uniform sampler2D u_texture;
+
+        varying vec4 v_position;
+        varying vec3 v_normal;
+        varying vec3 v_surfaceToLight;
+        varying vec3 v_surfaceToView;
+
+        uniform vec4 u_lightColor;
+        uniform vec4 u_ambient;
+        uniform sampler2D u_diffuse;
+        uniform vec4 u_specular;
+        uniform float u_shininess;
+        uniform float u_specularFactor;
+
+        vec4 lit(float l ,float h, float m) {
+            return vec4(1.0,
+                        max(l, 0.0),
+                        (l > 0.0) ? pow(max(0.0, h), m) : 0.0,
+                        1.0);
+        }
+
+        void main() {
+            vec4 diffuseColor = texture2D(u_diffuse, v_texCoord);
+            vec3 a_normal = normalize(v_normal);
+            vec3 surfaceToLight = normalize(v_surfaceToLight);
+            vec3 surfaceToView = normalize(v_surfaceToView);
+            vec3 halfVector = normalize(surfaceToLight + surfaceToView);
+            vec4 litR = lit(dot(a_normal, surfaceToLight),
+                                dot(a_normal, halfVector), u_shininess);
+            vec4 outColor = vec4((
+            u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
+                            u_specular * litR.z * u_specularFactor)).rgb,
+                diffuseColor.a);
+            gl_FragColor = outColor;
+        }
+    </script>
+    <script>
+        const m4 = twgl.m4;
+        const gl = document.querySelector("#c").getContext("webgl");
+
+        const objects = [];
+        const drawObjects = [];
+        const numObjects = 3;
+
+        for(let i = 0; i < numObjects; i++){
+            var programInfo;
+            var bufferInfo;
+            var id;
+
+            var uniforms = {
+                u_lightWorldPos: [0, 0, 0],
+                u_lightColor: [],
+                u_ambient: [],
+                u_specular: [],
+                u_shininess: 0,
+                u_specularFactor: 0,
+                u_diffuse: null,
+
+                u_viewInverse: m4.identity(),
+                u_world: m4.identity(),
+                u_worldInverseTranspose: m4.identity(),
+                u_worldViewProjection: m4.identity(),
+            };
+
+            if(i == 0){
+                id = "sun";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, 2, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"/Proj_2/sun.png",
+                });
+
+                uniforms.u_lightColor = [1, 0.8, 0.8, 1];
+                uniforms.u_ambient = [1, 1, 0.8, 1];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 1,
+                uniforms.u_diffuse = tex;
+
+                var t = [0, 0, 0];
+                var y = 0.05;
+                var z = 0;
+            }
+            if(i == 1){
+                id = "earth";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .2, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"/Proj_2/world.jpg",
+                });
+
+                uniforms.u_lightColor = [1, 1, 1, 1];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [3, 0, 0];
+                var y = 0.01;
+                var z = 0;
+            }
+            if(i == 2){
+                id = "moon";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .03, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"/Proj_2/moon.jpg",
+                });
+
+                uniforms.u_lightColor = [1, 1, 1, 1];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [3, 0, 0];
+                var y = 0.01;
+                var z = 0;
+            }
+
+            drawObjects.push({
+                programInfo: programInfo,
+                bufferInfo: bufferInfo,
+                uniforms: uniforms,
+            });
+            objects.push({
+                ID: id,
+                translation: t,
+                ySpeed: y,
+                zSpeed: z,
+                uniforms: uniforms,
+            });
+        };   
+
+
+        gl.clearColor(0.1, 0.1, 0.1, 1);  // backgrounds
+
+        function render(time) {
+            time *= 0.001;
+            twgl.resizeCanvasToDisplaySize(gl.canvas);
+            gl.canvas.width = 1425;
+            gl.canvas.height = 675;
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            gl.enable(gl.DEPTH_TEST);
+            gl.enable(gl.CULL_FACE);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            const fov = 40 * Math.PI / 180;
+            const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+            const zNear = 0.5;
+            const zFar = 100;
+            const projection = m4.perspective(fov, aspect, zNear, zFar);
+
+            const eye = [0, 0, -10];
+            const target = [0, 0, 0];
+            const up = [0, 1, 0];
+
+            const camera = m4.lookAt(eye, target, up);
+            const view = m4.inverse(camera);
+            const viewProjection = m4.multiply(projection, view);
+
+            /*uniforms.u_viewInverse = camera;
+            uniforms.u_world = world;
+            uniforms.u_worldInverseTranspose = m4.transpose(m4.inverse(world));
+            uniforms.u_worldViewProjection = m4.multiply(viewProjection, world);*/
+
+            objects.forEach(function(obj) {
+                const uni = obj.uniforms;
+                const world = uni.u_world;
+                m4.identity(world);
+                m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
+                m4.translate(world, obj.translation, world);//position
+                if (obj.ID == "earth"){
+                    m4.rotateZ(world, .2, world);//earth's weird angle
+                    m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
+                }
+                if (obj.ID == "moon"){//this makes the moon's orbit around earth
+                    m4.rotateY(world, time * obj.ySpeed * 25, world);
+                    m4.translate(world, [.3,0,0], world);
+                }
+                m4.rotateZ(world, time * obj.zSpeed, world);
+                //m4.rotateX(world, time, world);
+                m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
+                m4.multiply(viewProjection, uni.u_world, uni.u_worldViewProjection);
+            });
+
+            twgl.drawObjectList(gl, drawObjects);
+
+
+
+            requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+    </script>
+</html>
