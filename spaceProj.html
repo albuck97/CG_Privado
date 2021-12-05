@@ -19,7 +19,7 @@
             z-index: 2;
         }
         </style>
-        <script src="/Proj_2/twgl.js-master/dist/4.x/twgl-full.js"></script>
+        <script src="/twgl.js-master/dist/4.x/twgl-full.js"></script>
     </head>
     <body>
         <canvas id="c"></canvas>
@@ -128,7 +128,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"/Proj_2/sun.png",
+                    src:"/sun.png",
                 });
 
                 uniforms.u_lightColor = [1, 0.8, 0.8, 1];
@@ -150,7 +150,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"/Proj_2/world.jpg",
+                    src:"/world.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -172,7 +172,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"/Proj_2/moon.jpg",
+                    src:"/moon.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
