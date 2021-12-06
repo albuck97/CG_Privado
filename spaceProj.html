@@ -112,6 +112,9 @@
             u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
                             u_specular * litR.z * u_specularFactor)).rgb,
                 diffuseColor.a);
+            if (diffuseColor.a < 0.1){
+                discard;
+            }
             gl_FragColor = outColor;
         }
     </script>
@@ -121,7 +124,7 @@
 
         const objects = [];
         const drawObjects = [];
-        const numObjects = 4;
+        const numObjects = 6;
 
         const viewDirection = m4.identity();
         const viewDirectionProjection = m4.identity();
@@ -214,6 +217,50 @@
                 var z = 0;
             }
             if(i == 3){
+                id = "saturn";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .5, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"saturn.jpg",
+                });
+
+                uniforms.u_lightColor = [1, 1, 1, 1];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [5, 0, 0];
+                var y = 0.01;
+                var z = 0;
+            }
+            if(i == 4){
+                id = "saturn_rings";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createPlaneBufferInfo(gl, 2,2);
+
+                const tex = twgl.createTexture(gl, {
+                    mag: gl.NEAREST,
+                    min: gl.NEAREST,
+                    src:"saturn_rings.png",
+                });
+
+                uniforms.u_lightColor = [1, 1, 1, 1];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [5, 0, 0];
+                var y = 0.01;
+                var z = 0;
+            }
+            if(i == 5){
                 id = "background";
                 programInfo = twgl.createProgramInfo(gl, ["vs-b", "fs-b"]);
                 bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
@@ -263,8 +310,11 @@
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
             gl.enable(gl.DEPTH_TEST);
-            gl.enable(gl.CULL_FACE);
+            //gl.enable(gl.CULL_FACE);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.enable(gl.BLEND);
 
             const fov = 40 * Math.PI / 180;
             const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -313,6 +363,14 @@
                     if (obj.ID == "moon"){//this makes the moon's orbit around earth
                         m4.rotateY(world, time * obj.ySpeed * 25, world);
                         m4.translate(world, [.3,0,0], world);
+                    }
+                    if (obj.ID == "saturn"){
+                        m4.rotateX(world, -.2, world);//adding and alge to the rinds
+                        m4.rotateY(world, time * obj.ySpeed * 500, world);//rotation from saturn's axis
+                    }
+                    if (obj.ID == "saturn_rings"){
+                        m4.rotateX(world, -.2, world);//adding and alge to the rinds
+                        m4.rotateY(world, time * obj.ySpeed * 500, world);//rotation from saturn's axis
                     }
                     m4.rotateZ(world, time * obj.zSpeed, world);
                     //m4.rotateX(world, time, world);
