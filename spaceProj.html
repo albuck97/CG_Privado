@@ -124,7 +124,7 @@
 
         const objects = [];
         const drawObjects = [];
-        const numObjects = 6;
+        const numObjects = 7;
 
         const viewDirection = m4.identity();
         const viewDirectionProjection = m4.identity();
@@ -173,6 +173,28 @@
                 var z = 0;
             }
             if(i == 1){
+                id = "mercury";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .1, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"mercury.jpg",
+                });
+
+                uniforms.u_lightColor = [1, 1, 1, 1];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [2.25, 0, 0];
+                var y = 0.05;
+                var z = 0;
+            }
+            if(i == 2){
                 id = "earth";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .2, 48, 24);
@@ -194,7 +216,7 @@
                 var y = 0.01;
                 var z = 0;
             }
-            if(i == 2){
+            if(i == 3){
                 id = "moon";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .03, 48, 24);
@@ -216,7 +238,7 @@
                 var y = 0.01;
                 var z = 0;
             }
-            if(i == 3){
+            if(i == 4){
                 id = "saturn";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .5, 48, 24);
@@ -235,10 +257,10 @@
                 uniforms.u_diffuse = tex;
 
                 var t = [5, 0, 0];
-                var y = 0.01;
+                var y = 0.005;
                 var z = 0;
             }
-            if(i == 4){
+            if(i == 5){
                 id = "saturn_rings";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createPlaneBufferInfo(gl, 2,2);
@@ -257,10 +279,10 @@
                 uniforms.u_diffuse = tex;
 
                 var t = [5, 0, 0];
-                var y = 0.01;
+                var y = 0.005;
                 var z = 0;
             }
-            if(i == 5){
+            if(i == 6){
                 id = "background";
                 programInfo = twgl.createProgramInfo(gl, ["vs-b", "fs-b"]);
                 bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
