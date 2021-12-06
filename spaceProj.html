@@ -18,11 +18,35 @@
             text-align: center;
             z-index: 2;
         }
+        #ui {
+        position: absolute;
+        top: 30px;
+        left: 30px;
+        width: 300px;
+        z-index: 3;
+        padding: 1em;
+        color: white;
+        background-color: rgba(65, 65, 65, 0.5);
+      }
+      input {
+        width: 100%;
+      }
+      @media only screen and (max-width: 400px) {
+          #ui {
+            width: 90%;
+            padding: 0.5em;
+            left: 5%;
+          }
+      }
         </style>
         <script src="twgl.js-master/dist/4.x/twgl-full.js"></script>
     </head>
     <body>
         <canvas id="c"></canvas>
+        <div id="ui">
+            <div>TimeScale: <span id="time"></span></div>
+            <div><input id="time-input" type="range" min="1" max="1000" value="10"></div>
+        </div>
     </body>
 
     <script id="vs-b" type="notjs">
@@ -320,12 +344,23 @@
                 uniforms: uniforms,
             });
         };   
-
-
+        
         //gl.clearColor(0.1, 0.1, 0.1, 1);  // backgrounds
 
+        let timeScale = 100;
+        const timeElem = document.querySelector("#time");
+        const timeNode = document.createTextNode(timeScale);
+        const timeInput = document.getElementById("time-input");
+        timeInput.value = timeScale;
+        timeElem.appendChild(timeNode);
+
+        timeInput.addEventListener('input', function() {
+            timeScale = timeInput.value;
+            timeNode.nodeValue = timeScale;
+        });
+
         function render(time) {
-            time *= 0.001;
+            time *= 0.00005 * timeScale;
             twgl.resizeCanvasToDisplaySize(gl.canvas);
             gl.canvas.width = 1425;
             gl.canvas.height = 675;
