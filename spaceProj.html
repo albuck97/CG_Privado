@@ -184,7 +184,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"sun.png",
+                    src:"textures/sun.png",
                 });
 
                 uniforms.u_lightColor = [1, 0.8, 0.8, 1];
@@ -206,7 +206,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"mercury.jpg",
+                    src:"textures/mercury.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -228,7 +228,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"venus.jpg",
+                    src:"textures/venus.jpg",
                 });
 
                 uniforms.u_lightColor = [.8, 1, 1, 1];
@@ -250,7 +250,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"world.jpg",
+                    src:"textures/world.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -272,7 +272,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"moon.jpg",
+                    src:"textures/moon.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -294,7 +294,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"mars.jpg",
+                    src:"textures/mars.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -316,7 +316,7 @@
                 const tex = twgl.createTexture(gl, {
                     min: gl.NEAREST,
                     mag: gl.NEAREST,
-                    src:"saturn.jpg",
+                    src:"textures/saturn.jpg",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -338,7 +338,7 @@
                 const tex = twgl.createTexture(gl, {
                     mag: gl.NEAREST,
                     min: gl.NEAREST,
-                    src:"saturn_rings.png",
+                    src:"textures/saturn_rings.png",
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
@@ -361,12 +361,12 @@
                     u_skybox: twgl.createTexture(gl, {
                         target: gl.TEXTURE_CUBE_MAP,
                         src: [
-                        'background/bkg1_right.png',
-                        'background/bkg1_left.png',
-                        'background/bkg1_top.png',
-                        'background/bkg1_bot.png',
-                        'background/bkg1_front.png',
-                        'background/bkg1_back.png',
+                        'textures/background/bkg1_right.png',
+                        'textures/background/bkg1_left.png',
+                        'textures/background/bkg1_top.png',
+                        'textures/background/bkg1_bot.png',
+                        'textures/background/bkg1_front.png',
+                        'textures/background/bkg1_back.png',
                         ],
                     }),
                     
