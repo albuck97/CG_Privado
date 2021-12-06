@@ -45,9 +45,11 @@
         <canvas id="c"></canvas>
         <div id="ui">
             <div>TimeScale: <span id="time"></span></div>
-            <div><input id="time-input" type="range" min="1" max="1000" value="10"></div>
+            <div><input id="slider" type="range" min="1" max="100000" value="10"></div>
         </div>
     </body>
+    
+    <!--TODO: this is extra but it would be nice to make a logarithmic slider to help with the lower values-->
 
     <script id="vs-b" type="notjs">
         attribute vec4 position;
@@ -347,10 +349,10 @@
         
         //gl.clearColor(0.1, 0.1, 0.1, 1);  // backgrounds
 
-        let timeScale = 100;
+        let timeScale = 1000;
         const timeElem = document.querySelector("#time");
         const timeNode = document.createTextNode(timeScale);
-        const timeInput = document.getElementById("time-input");
+        const timeInput = document.getElementById("slider");
         timeInput.value = timeScale;
         timeElem.appendChild(timeNode);
 
@@ -360,7 +362,7 @@
         });
 
         function render(time) {
-            time *= 0.00005 * timeScale;
+            time *= 0.000001 * timeScale;
             twgl.resizeCanvasToDisplaySize(gl.canvas);
             gl.canvas.width = 1425;
             gl.canvas.height = 675;
