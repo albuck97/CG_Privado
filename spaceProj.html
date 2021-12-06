@@ -150,7 +150,7 @@
 
         const objects = [];
         const drawObjects = [];
-        const numObjects = 7;
+        const numObjects = 9;
 
         const viewDirection = m4.identity();
         const viewDirectionProjection = m4.identity();
@@ -210,7 +210,7 @@
                 });
 
                 uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
                 uniforms.u_specular = [1, 1, 1, 1];
                 uniforms.u_shininess = 50;
                 uniforms.u_specularFactor = 0.1;
@@ -221,6 +221,28 @@
                 var z = 0;
             }
             if(i == 2){
+                id = "venus";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .16, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"venus.jpg",
+                });
+
+                uniforms.u_lightColor = [.8, 1, 1, 1];
+                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [2.8, 0, 0];
+                var y = 0.02;
+                var z = 0;
+            }
+            if(i == 3){
                 id = "earth";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .2, 48, 24);
@@ -238,11 +260,11 @@
                 uniforms.u_specularFactor = 0.1;
                 uniforms.u_diffuse = tex;
 
-                var t = [3, 0, 0];
+                var t = [3.5, 0, 0];
                 var y = 0.01;
                 var z = 0;
             }
-            if(i == 3){
+            if(i == 4){
                 id = "moon";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .03, 48, 24);
@@ -260,11 +282,33 @@
                 uniforms.u_specularFactor = 0.1;
                 uniforms.u_diffuse = tex;
 
-                var t = [3, 0, 0];
+                var t = [3.5, 0, 0];
                 var y = 0.01;
                 var z = 0;
             }
-            if(i == 4){
+            if(i == 5){
+                id = "mars";
+                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .16, 48, 24);
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src:"mars.jpg",
+                });
+
+                uniforms.u_lightColor = [1, 1, 1, 1];
+                uniforms.u_ambient = [0.5, 0.5, 0.5, 0];
+                uniforms.u_specular = [1, 1, 1, 1];
+                uniforms.u_shininess = 50;
+                uniforms.u_specularFactor = 0.1;
+                uniforms.u_diffuse = tex;
+
+                var t = [4.3, 0, 0];
+                var y = 0.005;
+                var z = 0;
+            }
+            if(i == 6){
                 id = "saturn";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .5, 48, 24);
@@ -282,11 +326,11 @@
                 uniforms.u_specularFactor = 0.1;
                 uniforms.u_diffuse = tex;
 
-                var t = [5, 0, 0];
-                var y = 0.005;
+                var t = [6, 0, 0];
+                var y = 0.001;
                 var z = 0;
             }
-            if(i == 5){
+            if(i == 7){
                 id = "saturn_rings";
                 programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
                 bufferInfo = twgl.primitives.createPlaneBufferInfo(gl, 2,2);
@@ -304,11 +348,11 @@
                 uniforms.u_specularFactor = 0.1;
                 uniforms.u_diffuse = tex;
 
-                var t = [5, 0, 0];
-                var y = 0.005;
+                var t = [6, 0, 0];
+                var y = 0.001;
                 var z = 0;
             }
-            if(i == 6){
+            if(i == 8){
                 id = "background";
                 programInfo = twgl.createProgramInfo(gl, ["vs-b", "fs-b"]);
                 bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
@@ -415,9 +459,15 @@
                     m4.identity(world);
                     m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
                     m4.translate(world, obj.translation, world);//position
+                    if (obj.ID == "venus"){
+                        m4.rotateY(world, time * obj.ySpeed * -5, world);//inverse rotation from venus's axis
+                    }
                     if (obj.ID == "earth"){
                         m4.rotateZ(world, .2, world);//earth's weird angle
                         m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
+                    }
+                    if (obj.ID == "mars"){
+                        m4.rotateY(world, time * obj.ySpeed * 2000, world);//rotation from mars's axis
                     }
                     if (obj.ID == "moon"){//this makes the moon's orbit around earth
                         m4.rotateY(world, time * obj.ySpeed * 25, world);
