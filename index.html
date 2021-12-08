@@ -168,9 +168,11 @@
 		var canvasIsPressed = false;
 		var xMove = 0;
 		var yMove = 0;
-		var eyeV = [[0],[0],[-10]];
+		var eyeV = [[0],[0],[-10],[1]];
 		var xRot;
 		var yRot;
+		var rTrans
+		var trans;
 		var rot;
 		var tar = [[0],[0],[0]];
 		var lastPressX;
@@ -220,11 +222,13 @@
 			
 				xMove = -1*((e.pageX - lastPressX))/200;
 				yMove = ((e.pageY - lastPressY))/200;
-				
-
-				xRot = [[1,0,0],[0,Math.cos(yMove), -1*Math.sin(yMove)],[0,Math.sin(yMove),Math.cos(yMove)]];
-				yRot = [[Math.cos(xMove),0,Math.sin(xMove)],[0,1,0],[-1*Math.sin(xMove),0,Math.cos(xMove)]];
+				trans = [[1,0,0,tar[0][0]],[0,1,0,tar[1][0]],[0,0,1,tar[2][0]],[0,0,0,1]];
+				rTrans = [[1,0,0,-1*tar[0][0]],[0,1,0,-1*tar[1][0]],[0,0,1,-1*tar[2][0]],[0,0,0,1]];
+				xRot = [[1,0,0,0],[0,Math.cos(yMove), -1*Math.sin(yMove),0],[0,Math.sin(yMove),Math.cos(yMove),0],[0,0,0,1]];
+				yRot = [[Math.cos(xMove),0,Math.sin(xMove),0],[0,1,0,0],[-1*Math.sin(xMove),0,Math.cos(xMove),0],[0,0,0,1]];
 				rot = multiply(xRot,yRot);
+				rot = multiply(trans,rot);
+				rot = multiply(rot,rTrans);
 				console.log("Log matrices:");
 				console.log(rot);
 				console.log(eyeV);
