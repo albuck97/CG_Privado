@@ -145,6 +145,101 @@
         }
     </script>
     <script>
+	
+		function multiply(a, b) {
+			var aNumRows = a.length, aNumCols = a[0].length,
+				bNumRows = b.length, bNumCols = b[0].length,
+				m = new Array(aNumRows);
+			for (var r = 0; r < aNumRows; ++r) {
+				m[r] = new Array(bNumCols);
+				for (var c = 0; c < bNumCols; ++c) {
+					m[r][c] = 0;
+					for (var i = 0; i < aNumCols; ++i) {
+						m[r][c] += a[r][i] * b[i][c];
+					}
+				}
+			}
+			return m;
+		}
+	
+	
+		var canvas = document.getElementById("c");
+	
+		var canvasIsPressed = false;
+		var xMove = 0;
+		var yMove = 0;
+		var eyeV = [[0],[0],[-10]];
+		var xRot;
+		var yRot;
+		var rot;
+		var tar = [[0],[0],[0]];
+		var lastPressX;
+		var lastPressY;
+		
+		
+		window.onkeypress = function (e) {
+			console.log("keypress");
+			console.log(e.key);
+			switch(e.key) {
+				case "1":
+					tar[0][0] = 3.5;
+					tar[1][0] = 0;
+					tar[2][0] = 0;
+					break;
+				case "2":
+					tar[0][0] = 0;
+					tar[1][0] = 0;
+					tar[2][0] = 0;
+					break;
+				case "d":
+					eyeV[0][0] = 0;
+					eyeV[1][0] = 0;
+					eyeV[2][0] = -10;
+					break;
+			}
+			requestAnimationFrame(render);
+		}
+		
+		canvas.onmousedown = function (e) {
+			canvasIsPressed = true;
+			lastPressX = e.pageX;
+			lastPressY = e.pageY;
+			requestAnimationFrame(render);
+		}
+		canvas.onmouseup = function () {
+			canvasIsPressed = false;
+			requestAnimationFrame(render);
+		}
+		canvas.onmouseout = function () {
+			canvasIsPressed = false;
+			requestAnimationFrame(render);
+		}
+		canvas.onmousemove = function (e) {
+		
+			if (canvasIsPressed) {
+			
+				xMove = -1*((e.pageX - lastPressX))/200;
+				yMove = ((e.pageY - lastPressY))/200;
+				
+
+				xRot = [[1,0,0],[0,Math.cos(yMove), -1*Math.sin(yMove)],[0,Math.sin(yMove),Math.cos(yMove)]];
+				yRot = [[Math.cos(xMove),0,Math.sin(xMove)],[0,1,0],[-1*Math.sin(xMove),0,Math.cos(xMove)]];
+				rot = multiply(xRot,yRot);
+				console.log("Log matrices:");
+				console.log(rot);
+				console.log(eyeV);
+				eyeV = multiply(rot,eyeV);
+			
+				lastPressX = e.pageX;
+				lastPressY = e.pageY;
+				
+				requestAnimationFrame(render);
+			}
+		}
+	
+	
+	
+	
         const m4 = twgl.m4;
         const gl = document.querySelector("#c").getContext("webgl");
 
@@ -425,8 +520,8 @@
             const zFar = 100;
             const projection = m4.perspective(fov, aspect, zNear, zFar);
 
-            const eye = [0, 0, -10];
-            const target = [0, 0, 0];
+            const eye = [eyeV[0][0], eyeV[1][0], eyeV[2][0]];
+            const target = [tar[0][0], tar[1][0], tar[2][0]];
             const up = [0, 1, 0];
 
             const camera = m4.lookAt(eye, target, up);
