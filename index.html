@@ -197,22 +197,18 @@
 					eyeV[2][0] = -10;
 					break;
 			}
-			requestAnimationFrame(render);
 		}
 		
 		canvas.onmousedown = function (e) {
 			canvasIsPressed = true;
 			lastPressX = e.pageX;
 			lastPressY = e.pageY;
-			requestAnimationFrame(render);
 		}
 		canvas.onmouseup = function () {
 			canvasIsPressed = false;
-			requestAnimationFrame(render);
 		}
 		canvas.onmouseout = function () {
 			canvasIsPressed = false;
-			requestAnimationFrame(render);
 		}
 		canvas.onmousemove = function (e) {
 		
@@ -232,9 +228,6 @@
 				lastPressX = e.pageX;
 				lastPressY = e.pageY;
 				
-				requestAnimationFrame(render);
-			}else{
-				requestAnimationFrame(render);
 			}
 		}
 	
