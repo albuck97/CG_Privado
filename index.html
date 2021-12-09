@@ -181,8 +181,6 @@
 		
 		
 		window.onkeypress = function (e) {
-			console.log("keypress");
-			console.log(e.key);
 			switch(e.key) {
 				case "1":
 					earthTarget = true;
@@ -229,9 +227,6 @@
 				rot = multiply(xRot,yRot);
 				rot = multiply(trans,rot);
 				rot = multiply(rot,rTrans);
-				console.log("Log matrices:");
-				console.log(rot);
-				console.log(eyeV);
 				eyeV = multiply(rot,eyeV);
 			
 				lastPressX = e.pageX;
@@ -571,11 +566,6 @@
 							tar[0][0] = currT[0];
 							tar[1][0] = currT[1];
 							tar[2][0] = currT[2];
-							console.log("Translation:");
-							console.log(currT);
-							for(let i = 0; i < currT.length; i++){
-								console.log(currT[i]);
-							}
 						}
                     }
                     if (obj.ID == "mars"){
