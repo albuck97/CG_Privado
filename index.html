@@ -557,7 +557,7 @@
                     const world = uni.u_world;
                     m4.identity(world);
                     m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
-                    m4.translate(world, obj.translation, world);//position
+                    currT = m4.translate(world, obj.translation, world);//position
                     if (obj.ID == "venus"){
                         m4.rotateY(world, time * obj.ySpeed * -5, world);//inverse rotation from venus's axis
                     }
