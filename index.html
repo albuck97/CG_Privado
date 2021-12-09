@@ -566,14 +566,12 @@
                         m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
 						if(earthTarget == true){
 							var currT = [0,0,0];
-							m4.getAxis(world,currT);
+							currT = m4.getAxis(world,currT);
 							tar[0][0] = currT[0];
 							tar[1][0] = currT[1];
 							tar[2][0] = currT[2];
 							console.log("Translation:");
-							console.log(currT[0]);
-							console.log(currT[1]);
-							console.log(currT[2]);
+							console.log(currT);
 							for(let i = 0; i < currT.length; i++){
 								console.log(currT[i]);
 							}
