@@ -566,7 +566,7 @@
                         m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
 						if(earthTarget == true){
 							var currT = [0,0,0];
-							currT = m4.getAxis(world,currT);
+							m4.getAxis(world,currT);
 							tar[0][0] = currT[0];
 							tar[1][0] = currT[1];
 							tar[2][0] = currT[2];
