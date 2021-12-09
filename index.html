@@ -166,6 +166,7 @@
 		var canvas = document.getElementById("c");
 	
 		var canvasIsPressed = false;
+		var earthTarget = false;
 		var xMove = 0;
 		var yMove = 0;
 		var eyeV = [[0],[0],[-10],[1]];
@@ -184,14 +185,13 @@
 			console.log(e.key);
 			switch(e.key) {
 				case "1":
-					tar[0][0] = 3.5;
-					tar[1][0] = 0;
-					tar[2][0] = 0;
+					earthTarget = true;
 					break;
 				case "2":
 					tar[0][0] = 0;
 					tar[1][0] = 0;
 					tar[2][0] = 0;
+					earthTarget = false;
 					break;
 				case "d":
 					eyeV[0][0] = 0;
@@ -564,6 +564,9 @@
                     if (obj.ID == "earth"){
                         m4.rotateZ(world, .2, world);//earth's weird angle
                         m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
+						tar[0][0] = obj.translation[0];
+						tar[1][0] = obj.translation[1];
+						tar[2][0] = obj.translation[2];
                     }
                     if (obj.ID == "mars"){
                         m4.rotateY(world, time * obj.ySpeed * 2000, world);//rotation from mars's axis
