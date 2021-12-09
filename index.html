@@ -241,9 +241,14 @@
 			dVect[1][0] = tar[1][0] - eyeV[1][0];
 			dVect[2][0] = tar[2][0] - eyeV[2][0];
 			
-			eyeV[0][0] = eyeV[0][0] + dVect[0][0]*zMove;
-			eyeV[1][0] = eyeV[1][0] + dVect[1][0]*zMove;
-			eyeV[2][0] = eyeV[2][0] + dVect[2][0]*zMove;
+			eyeV[0][0] = eyeV[0][0] + (dVect[0][0]*zMove);
+			eyeV[1][0] = eyeV[1][0] + (dVect[1][0]*zMove);
+			eyeV[2][0] = eyeV[2][0] + (dVect[2][0]*zMove);
+			console.log("Eye Test Begin");
+			console.log(eyeV[0][0]);
+			console.log(eyeV[1][0]);
+			console.log(eyeV[2][0]);
+			console.log("Eye Test End");
 			
 			
 		}
