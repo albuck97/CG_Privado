@@ -564,9 +564,15 @@
                     if (obj.ID == "earth"){
                         m4.rotateZ(world, .2, world);//earth's weird angle
                         m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
-						tar[0][0] = obj.translation[0];
-						tar[1][0] = obj.translation[1];
-						tar[2][0] = obj.translation[2];
+						if(earthTarget == true){
+							tar[0][0] = obj.translation[0];
+							tar[1][0] = obj.translation[1];
+							tar[2][0] = obj.translation[2];
+							console.log("Translation:");
+							console.log(obj.translation[0]);
+							console.log(obj.translation[1]);
+							console.log(obj.translation[2]);
+						}
                     }
                     if (obj.ID == "mars"){
                         m4.rotateY(world, time * obj.ySpeed * 2000, world);//rotation from mars's axis
