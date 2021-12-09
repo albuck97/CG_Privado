@@ -557,7 +557,7 @@
                     const world = uni.u_world;
                     m4.identity(world);
                     m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
-                    m4.translate(world, obj.translation, world);//position
+                    var currT = m4.translate(world, obj.translation, world);//position
                     if (obj.ID == "venus"){
                         m4.rotateY(world, time * obj.ySpeed * -5, world);//inverse rotation from venus's axis
                     }
@@ -565,13 +565,13 @@
                         m4.rotateZ(world, .2, world);//earth's weird angle
                         m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
 						if(earthTarget == true){
-							tar[0][0] = obj.translation[0];
-							tar[1][0] = obj.translation[1];
-							tar[2][0] = obj.translation[2];
+							tar[0][0] = currT[0];
+							tar[1][0] = currT[1];
+							tar[2][0] = currT[2];
 							console.log("Translation:");
-							console.log(obj.translation[0]);
-							console.log(obj.translation[1]);
-							console.log(obj.translation[2]);
+							console.log(currT[0]);
+							console.log(currT[1]);
+							console.log(currT[2]);
 						}
                     }
                     if (obj.ID == "mars"){
