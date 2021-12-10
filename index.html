@@ -229,14 +229,6 @@
 				rot = multiply(rot,rTrans);
 				eyeV = multiply(rot,eyeV);
 				
-				if(eyeV[2][0] >= 0){
-					yUp = 0;
-					xUp = 1;
-				}else{
-					yUp = 1;
-					xUp = 0;
-				}
-			
 				lastPressX = e.pageX;
 				lastPressY = e.pageY;
 				
