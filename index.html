@@ -173,6 +173,7 @@
 		var eyeV = [[0],[0],[-10],[1]];
 		var xRot;
 		var yRot;
+		var yUp = 1;
 		var rTrans
 		var trans;
 		var rot;
@@ -226,6 +227,12 @@
 				rot = multiply(trans,rot);
 				rot = multiply(rot,rTrans);
 				eyeV = multiply(rot,eyeV);
+				
+				if(eyeV[2][0] >= 0){
+					yUp = -1;
+				}else{
+					yUp = 1;
+				}
 			
 				lastPressX = e.pageX;
 				lastPressY = e.pageY;
@@ -540,7 +547,7 @@
 
             const eye = [eyeV[0][0], eyeV[1][0], eyeV[2][0]];
             const target = [tar[0][0], tar[1][0], tar[2][0]];
-            const up = [0, 1, 0];
+            const up = [0, yUp, 0];
 
             const camera = m4.lookAt(eye, target, up);
             const view = m4.inverse(camera);
