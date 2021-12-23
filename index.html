@@ -1041,8 +1041,11 @@
             const eye = [eyeV[0][0], eyeV[1][0], eyeV[2][0]];
             const target = [tar[0][0], tar[1][0], tar[2][0]];
             //const up = [0, 1, 0];
-            const up = [0, -1, 0];
-
+			if(eye[3] < 0){
+				const up = [0, 1, 0];
+			}else{
+				const up = [0, -1, 0];
+			}
             const camera = m4.lookAt(eye, target, up);
             const view = m4.inverse(camera);
             const viewProjection = m4.multiply(projection, view);
