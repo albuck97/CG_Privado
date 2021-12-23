@@ -51,6 +51,7 @@
     
     <!--TODO: this is extra but it would be nice to make a logarithmic slider to help with the lower values-->
 
+    <!--Background cubemap shaders-->
     <script id="vs-b" type="notjs">
         attribute vec4 position;
         varying vec4 v_position;
@@ -74,6 +75,7 @@
         }
     </script>
 
+    <!--Phong shading-->
     <script id="vs" type="notjs">
         uniform mat4 u_worldViewProjection;     
 
@@ -119,6 +121,8 @@
         uniform float u_shininess;
         uniform float u_specularFactor;
 
+        uniform int u_lightMode;
+
         vec4 lit(float l ,float h, float m) {
             return vec4(1.0,
                         max(l, 0.0),
@@ -134,18 +138,151 @@
             vec3 halfVector = normalize(surfaceToLight + surfaceToView);
             vec4 litR = lit(dot(a_normal, surfaceToLight),
                                 dot(a_normal, halfVector), u_shininess);
-            vec4 outColor = vec4((
-            u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
+
+            //normal
+            vec4 outColor = vec4((u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
                             u_specular * litR.z * u_specularFactor)).rgb,
-                diffuseColor.a);
+                              diffuseColor.a);
+
+            //ambiente + difusa
+            if(u_lightMode == 1){
+                outColor = vec4((u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient)).rgb,
+                                diffuseColor.a);
+            }
+
+            //ambiente
+            if(u_lightMode == 2){
+                outColor = vec4((u_lightColor * (u_ambient * diffuseColor)).rgb,
+                                1.0);
+            }
+
+            //difusa
+            if(u_lightMode == 3){
+                outColor = vec4((u_lightColor * (diffuseColor * litR.y)).rgb,
+                                diffuseColor.a);
+            }
+
+            //especular
+            if(u_lightMode == 4){
+                outColor = vec4((u_lightColor * (diffuseColor * u_specular * litR.z * u_specularFactor)).rgb,
+                                1.0);
+            }
+
             if (diffuseColor.a < 0.1){
                 discard;
             }
             gl_FragColor = outColor;
         }
     </script>
+
+    <!--Gouraud shading-->
+    <script id="vs-g" type="notjs">
+        uniform mat4 u_worldViewProjection;     
+
+        uniform vec3 u_lightWorldPos;
+        uniform mat4 u_world;
+        uniform mat4 u_viewInverse;
+        uniform mat4 u_worldInverseTranspose;
+
+        attribute vec4 position;
+        attribute vec3 normal;
+        attribute vec2 texcoord;
+
+
+        //from fragment
+
+        varying vec2 v_texCoord;
+        uniform sampler2D u_texture;
+
+        varying vec4 v_position;
+        varying vec3 v_normal;
+        varying vec3 v_surfaceToLight;
+        varying vec3 v_surfaceToView;
+
+        uniform vec4 u_lightColor;
+        uniform vec4 u_ambient;
+        uniform sampler2D u_diffuse;
+        uniform vec4 u_specular;
+        uniform float u_shininess;
+        uniform float u_specularFactor;
+
+        uniform int u_lightMode;
+
+        varying vec4 color; //color
+
+        vec4 lit(float l ,float h, float m) {
+            return vec4(1.0,
+                        max(l, 0.0),
+                        (l > 0.0) ? pow(max(0.0, h), m) : 0.0,
+                        1.0);
+        }
+
+        void main() {
+            v_texCoord = texcoord;
+            v_position = u_worldViewProjection * position;
+            v_normal = (u_worldInverseTranspose * vec4(normal, 0)).xyz;
+            v_surfaceToLight = u_lightWorldPos - (u_world * position).xyz;
+            v_surfaceToView = (u_viewInverse[3] - (u_world * position)).xyz;
+            gl_Position = v_position;
+
+            //from fragment
+            vec4 diffuseColor = texture2D(u_diffuse, v_texCoord);
+            vec3 a_normal = normalize(v_normal);
+            vec3 surfaceToLight = normalize(v_surfaceToLight);
+            vec3 surfaceToView = normalize(v_surfaceToView);
+            vec3 halfVector = normalize(surfaceToLight + surfaceToView);
+            vec4 litR = lit(dot(a_normal, surfaceToLight),
+                                dot(a_normal, halfVector), u_shininess);
+
+            //normal
+            vec4 outColor = vec4((
+            u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
+                            u_specular * litR.z * u_specularFactor)).rgb,
+                diffuseColor.a);
+    
+            //ambiente + difusa
+            if(u_lightMode == 1){
+                outColor = vec4((u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient)).rgb,
+                                diffuseColor.a);
+            }
+
+            //ambiente
+            if(u_lightMode == 2){
+                outColor = vec4((u_lightColor * (u_ambient * diffuseColor)).rgb,
+                                1.0);
+            }
+
+            //difusa
+            if(u_lightMode == 3){
+                outColor = vec4((u_lightColor * (diffuseColor * litR.y)).rgb,
+                                diffuseColor.a);
+            }
+
+            //especular
+            if(u_lightMode == 4){
+                outColor = vec4((u_lightColor * (diffuseColor * u_specular * litR.z * u_specularFactor)).rgb,
+                                1.0);
+            }
+
+
+            //if (diffuseColor.a < 0.1){
+            //    discard;
+            //}
+            color = outColor;
+        }
+    </script>
+    <script id="fs-g" type="notjs">
+        precision mediump float;
+
+        varying vec4 color;
+        void main() {
+            gl_FragColor = color;
+            //gl_FragColor.rgb *= color.a;
+        }
+    </script>
+
     <script>
-	
+        var id_Render;
 		function multiply(a, b) {
 			var aNumRows = a.length, aNumCols = a[0].length,
 				bNumRows = b.length, bNumCols = b[0].length,
@@ -167,19 +304,26 @@
 	
 		var canvasIsPressed = false;
 		var earthTarget = false;
-		
-		
-		var cameraAngleDX = 180;
-		var cameraAngleDY = 180;
-		
+		var xMove = 0;
+		var yMove = 0;
+		var eyeV = [[0],[0],[-25],[1]];
 		var xRot;
 		var yRot;
+        var xUp = 0;
+		var yUp = 1;
+		var rTrans
+		var trans;
 		var rot;
 		var tar = [[0],[0],[0]];
-		var dVect = [[0],[0],[0]];
+        var dVect = [[0],[0],[0]];
 		var lastPressX;
 		var lastPressY;
 		
+        var V = "vs";
+        var F = "fs";
+        var hasOrbits = false;
+        var lightMode = 0;
+        var hasAst = false;
 		
 		window.onkeypress = function (e) {
 			switch(e.key) {
@@ -192,318 +336,675 @@
 					tar[2][0] = 0;
 					earthTarget = false;
 					break;
-				case "d":
+				case "r":
 					eyeV[0][0] = 0;
 					eyeV[1][0] = 0;
-					eyeV[2][0] = -10;
+					eyeV[2][0] = -25;
 					break;
+                case "s":
+                    if(V == "vs"){
+                        V = "vs-g"
+                        F = "fs-g"
+                        console.log("gouraud");
+                    }
+                    else{
+                        V = "vs"
+                        F = "fs"
+                        console.log("phong");
+                    }
+                    cancelAnimationFrame(id_Render);
+                    objects = [];
+                    drawObjects = [];
+                    if(hasOrbits){
+                        orbits();
+                    }
+                    if(hasAst){
+                        asteroids();
+                    }
+                    elms();
+                    render(time);
+                    break;
+                case "o":
+                    cancelAnimationFrame(id_Render);
+                    objects = [];
+                    drawObjects = [];
+                    if(!hasOrbits){
+                        hasOrbits = true;
+                        orbits();
+                    }
+                    else{
+                        hasOrbits = false;
+                    }
+                    if(hasAst){
+                        asteroids();
+                    }
+                    elms();
+                    render(time);
+                    break;
+                case "m":
+                    if(lightMode == 4){
+                        lightMode =0;
+                    }
+                    else{
+                        lightMode ++;
+                    }
+                    cancelAnimationFrame(id_Render);
+                    objects = [];
+                    drawObjects = [];
+                    if(hasOrbits){
+                        orbits();
+                    }
+                    if(hasAst){
+                        asteroids();
+                    }
+                    elms();
+                    render(time);
+                    switch(lightMode){
+                        case 0:
+                            console.log("normal");
+                            break;
+                        case 1:
+                            console.log("ambient + diffuse");
+                            break;
+                        case 2:
+                            console.log("ambient");
+                            break;
+                        case 3:
+                            console.log("diffuse");
+                            break;
+                        case 4:
+                            console.log("specular");
+                            break;
+                    }
+                    break;
+                case "a":
+                    if(!hasAst){
+                        hasAst = true;
+                        cancelAnimationFrame(id_Render);
+                        objects = [];
+                        drawObjects = [];
+                        if(hasOrbits){
+                            orbits();
+                        }
+                        asteroids();
+                        elms();
+                        render(time);
+                    }
+                    else{
+                        hasAst = false;
+                        cancelAnimationFrame(id_Render);
+                        objects = [];
+                        drawObjects = [];
+                        if(hasOrbits){
+                            orbits();
+                        }
+                        elms();
+                        render(time);
+                    }
+                    break;
 			}
 		}
 		
-		canvas.onmousedown = function (e) {
+        canvas.addEventListener("mousedown", handleMouseDown);
+        canvas.addEventListener("wheel", handleWheel);
+		function handleMouseDown(e) {
 			canvasIsPressed = true;
 			lastPressX = e.pageX;
 			lastPressY = e.pageY;
+
+            canvas.removeEventListener("mousedown", handleMouseDown);
+            canvas.addEventListener("mouseup", handleMouseUp);
+            canvas.addEventListener("mouseout", handleMouseOut);
+            canvas.addEventListener("mousemove", handleMouseMove);
 		}
-		canvas.onmouseup = function () {
+        function handleMouseMove(e){
+            if (canvasIsPressed) {
+                
+                xMove = -1*((e.pageX - lastPressX))/200;
+                yMove = 1*((e.pageY - lastPressY))/200;
+                trans = [[1,0,0,tar[0][0]],[0,1,0,tar[1][0]],[0,0,1,tar[2][0]],[0,0,0,1]];
+                rTrans = [[1,0,0,-1*tar[0][0]],[0,1,0,-1*tar[1][0]],[0,0,1,-1*tar[2][0]],[0,0,0,1]];
+                xRot = [[1,0,0,0],[0,Math.cos(yMove), -1*Math.sin(yMove),0],[0,Math.sin(yMove),Math.cos(yMove),0],[0,0,0,1]];
+                yRot = [[Math.cos(xMove),0,Math.sin(xMove),0],[0,1,0,0],[-1*Math.sin(xMove),0,Math.cos(xMove),0],[0,0,0,1]];
+                rot = multiply(xRot,yRot);
+                rot = multiply(trans,rot);
+                rot = multiply(rot,rTrans);
+                eyeV = multiply(rot,eyeV);
+            
+                lastPressX = e.pageX;
+                lastPressY = e.pageY;
+            }
+        }
+		function handleMouseUp() {
 			canvasIsPressed = false;
+            canvas.removeEventListener("mousemove", handleMouseMove);
+            canvas.addEventListener("mousedown", handleMouseDown);
+            canvas.addEventListener("mousedown", handleMouseDown);
 		}
-		canvas.onmouseout = function () {
+		function handleMouseOut() {
 			canvasIsPressed = false;
+            canvas.removeEventListener("mousemove", handleMouseMove);
+            canvas.removeEventListener("mouseup", handleMouseUp);
+            canvas.removeEventListener("mouseout", handleMouseOut);
+            canvas.addEventListener("mousedown", handleMouseDown);
 		}
-		canvas.onmousemove = function (e) {
-		
-			if (canvasIsPressed) {
-			
-				xMove = -1*((e.pageX - lastPressX))/200;
-				yMove = ((e.pageY - lastPressY))/200;
-				
-				cameraAngleDX+=(xMove+360);
-				cameraAngleDY+=(yMove+360);
-				
-				cameraAngleDX = (cameraAngleDX%720)-360;
-				cameraAngleDY = (cameraAngleDY%720)-360;
-				
-				
-				
-				lastPressX = e.pageX;
-				lastPressY = e.pageY;
-				
-			}
-		}
-		
-		canvas.onwheel = function (e) {
-		
-			zMove = -1*e.deltaY*0.0002;
-			
-			dVect[0][0] = tar[0][0] - eyeV[0][0];
-			dVect[1][0] = tar[1][0] - eyeV[1][0];
-			dVect[2][0] = tar[2][0] - eyeV[2][0];
-			
-			eyeV[0][0] = eyeV[0][0] + (dVect[0][0]*zMove);
-			eyeV[1][0] = eyeV[1][0] + (dVect[1][0]*zMove);
-			eyeV[2][0] = eyeV[2][0] + (dVect[2][0]*zMove);
-			console.log("Eye Test Begin");
-			console.log(eyeV[0][0]);
-			console.log(eyeV[1][0]);
-			console.log(eyeV[2][0]);
-			console.log(zMove);
-			console.log("Eye Test End");
-			
-			
-		}
-	
-	
+        function handleWheel(e) {
+            zMove = -1*e.deltaY*0.001;
+            
+            dVect[0][0] = tar[0][0] - eyeV[0][0];
+            dVect[1][0] = tar[1][0] - eyeV[1][0];
+            dVect[2][0] = tar[2][0] - eyeV[2][0];
+            
+            eyeV[0][0] = eyeV[0][0] + (dVect[0][0]*zMove);
+            eyeV[1][0] = eyeV[1][0] + (dVect[1][0]*zMove);
+            eyeV[2][0] = eyeV[2][0] + (dVect[2][0]*zMove);
+
+            /*console.log(eyeV[0][0]);
+            console.log(eyeV[1][0]);
+            console.log(eyeV[2][0]);
+            console.log(zMove);*/
+        }
 	
 	
         const m4 = twgl.m4;
 		const v3 = twgl.v3;
         const gl = document.querySelector("#c").getContext("webgl");
 
-        const objects = [];
-        const drawObjects = [];
-        const numObjects = 9;
+        var objects = [];
+        var drawObjects = [];
+        const numObjects = 16;
+        const numOrbits = 10;
+        const numAst = 2500;
 
         const viewDirection = m4.identity();
         const viewDirectionProjection = m4.identity();
         const viewDirectionProjectionInverse = m4.identity();
 
-        for(let i = 0; i < numObjects; i++){
-            var programInfo;
-            var bufferInfo;
-            var id;
+        function elms(){
+            for(let i = 0; i < numObjects; i++){
+                var programInfo;
+                var bufferInfo;
+                var id;
 
-            var uniforms = {
-                u_lightWorldPos: [0, 0, 0],
-                u_lightColor: [],
-                u_ambient: [],
-                u_specular: [],
-                u_shininess: 0,
-                u_specularFactor: 0,
-                u_diffuse: null,
+                var uniforms = {
+                    u_lightWorldPos: [0, 0, 0],
+                    u_lightColor: [],
+                    u_ambient: [],
+                    u_specular: [1, 1, 1, 1],
+                    u_shininess: 50,
+                    u_specularFactor: .1,
+                    u_diffuse: null,
 
-                u_viewInverse: m4.identity(),
-                u_world: m4.identity(),
-                u_worldInverseTranspose: m4.identity(),
-                u_worldViewProjection: m4.identity(),
-            };
+                    u_viewInverse: m4.identity(),
+                    u_world: m4.identity(),
+                    u_worldInverseTranspose: m4.identity(),
+                    u_worldViewProjection: m4.identity(),
 
-            if(i == 0){
-                id = "sun";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, 2, 48, 24);
+                    u_lightMode: lightMode,
+                };
+
+                if(i == 0){
+                    id = "sun";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, 4, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/sun.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 0.8, 0.8, 1];
+                    uniforms.u_ambient = [1, 1, 0.8, 1];
+                    uniforms.u_specularFactor = 1,
+                    uniforms.u_diffuse = tex;
+
+                    var t = [0, 0, 0];
+                    var y = 0.05;
+                    var z = 0;
+                }
+                if(i == 1){
+                    id = "mercury";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .1, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/mercury.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [4.7, 0, 0];
+                    var y = 0.05;
+                    var z = 0;
+                }
+                if(i == 2){
+                    id = "venus";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .16, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/venus.jpg",
+                    });
+
+                    uniforms.u_lightColor = [.8, 1, 1, 1];
+                    uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [5.5, 0, 0];
+                    var y = 0.02;
+                    var z = 0;
+                }
+                if(i == 3){
+                    id = "earth";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .2, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/earth.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.5, 0.5, 0.5, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [6.2, 0, 0];
+                    var y = 0.01;
+                    var z = 0;
+                }
+                if(i == 4){
+                    id = "moon";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .03, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/moon.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [6.2, 0, 0];
+                    var y = 0.01;
+                    var z = 0;
+                }
+                if(i == 5){
+                    id = "mars";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .16, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/mars.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.5, 0.5, 0.5, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [7, 0, 0];
+                    var y = 0.005;
+                    var z = 0;
+                }
+                if(i == 6){
+                    id = "jupiter";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .8, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/jupiter.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [10, 0, 0];
+                    var y = 0.0025;
+                    var z = 0;
+                }
+                if(i == 7){
+                    id = "saturn";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .5, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/saturn.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [12.5, 0, 0];
+                    var y = 0.0020;
+                    var z = 0;
+                }
+                if(i == 8){
+                    id = "saturn_rings";
+                    programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+                    bufferInfo = twgl.primitives.createPlaneBufferInfo(gl, 2,2);
+
+                    const tex = twgl.createTexture(gl, {
+                        mag: gl.NEAREST,
+                        min: gl.NEAREST,
+                        src:"textures/saturn_rings.png",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.5, 0.5, 0.5, 1];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [12.5, 0, 0];
+                    var y = 0.0020;
+                    var z = 0;
+                }
+                if(i == 9){
+                    id = "uranus";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .45, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/uranus.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [15, 0, 0];
+                    var y = 0.0012;
+                    var z = 0;
+                }
+                if((i == 10) || (i == 11) || (i == 12)){
+                    id = "uranus_rings";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    switch(i){
+                        case 10:
+                            bufferInfo = twgl.primitives.createDiscBufferInfo(gl, .65,64,0,0.6);
+                            break;
+                        case 11:
+                            bufferInfo = twgl.primitives.createDiscBufferInfo(gl, .57,64,0,0.54);
+                            break;
+                        case 12:
+                            bufferInfo = twgl.primitives.createDiscBufferInfo(gl, .5,64,0,0.49);
+                            break;
+                    }
+
+                    const tex = twgl.createTexture(gl, {
+                        mag: gl.NEAREST,
+                        min: gl.LINEAR,
+                        src: [
+                            5,5,5,30,
+                            5,5,5,30,
+                            5,5,5,30,
+                            5,5,5,30,
+                        ],
+                    });
+
+                    uniforms.u_lightColor = [.2, .2, .2, .5];
+                    uniforms.u_ambient = [0.2, 0.2, 0.2, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [15, 0, 0];
+                    var y = 0.0012;
+                    var z = 0;
+                }
+                if(i == 13){
+                    id = "neptune";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .3, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/neptune.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [17, 0, 0];
+                    var y = 0.0010;
+                    var z = 0;
+                }
+                if(i == 14){
+                    id = "pluto";
+                    programInfo = twgl.createProgramInfo(gl, [V, F]);
+                    bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .02, 48, 24);
+
+                    const tex = twgl.createTexture(gl, {
+                        min: gl.NEAREST,
+                        mag: gl.NEAREST,
+                        src:"textures/pluto.jpg",
+                    });
+
+                    uniforms.u_lightColor = [1, 1, 1, 1];
+                    uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
+                    uniforms.u_diffuse = tex;
+
+                    var t = [18, 0, 0];
+                    var y = 0.0007;
+                    var z = 0;
+                }
+                if(i == 15){
+                    id = "background";
+                    programInfo = twgl.createProgramInfo(gl, ["vs-b", "fs-b"]);
+                    bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
+
+                    uniforms = {
+                        u_skybox: twgl.createTexture(gl, {
+                            target: gl.TEXTURE_CUBE_MAP,
+                            src: [
+                            'textures/background/bkg1_right.png',
+                            'textures/background/bkg1_left.png',
+                            'textures/background/bkg1_top.png',
+                            'textures/background/bkg1_bot.png',
+                            'textures/background/bkg1_front.png',
+                            'textures/background/bkg1_back.png',
+                            ],
+                        }),
+                        
+                        u_viewDirectionProjectionInverse: viewDirectionProjectionInverse,
+                    };
+                    var t = [0,0,0];
+                    var y = 0;
+                    var z = 0;
+                }
+
+                drawObjects.push({
+                    programInfo: programInfo,
+                    bufferInfo: bufferInfo,
+                    uniforms: uniforms,
+                });
+                objects.push({
+                    ID: id,
+                    translation: t,
+                    ySpeed: y,
+                    zSpeed: z,
+                    uniforms: uniforms,
+                });
+            };   
+        }
+        elms();
+
+        function orbits(){
+            for(let i = 0; i < numOrbits; i++){
+                var programInfo;
+                var bufferInfo;
+                var id;
 
                 const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/sun.png",
-                });
+                        mag: gl.NEAREST,
+                        min: gl.LINEAR,
+                        src: [
+                            255,255,255,255,
+                            255,255,255,255,
+                            255,255,255,255,
+                            255,255,255,255,
+                        ],
+                    });
 
-                uniforms.u_lightColor = [1, 0.8, 0.8, 1];
-                uniforms.u_ambient = [1, 1, 0.8, 1];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 1,
-                uniforms.u_diffuse = tex;
+                var uniforms = {
+                    u_lightWorldPos: [0, 0, 0],
+                    u_lightColor: [1, 1, 1, 1],
+                    u_ambient: [1, 1, 1, 1],
+                    u_specular: [1, 1, 1, 1],
+                    u_shininess: 50,
+                    u_specularFactor: 0.1,
+                    u_diffuse: tex,
+
+                    u_viewInverse: m4.identity(),
+                    u_world: m4.identity(),
+                    u_worldInverseTranspose: m4.identity(),
+                    u_worldViewProjection: m4.identity(),
+
+                    u_lightMode: lightMode,
+                };
+
+                
+                id = "orbit";
+                programInfo = twgl.createProgramInfo(gl, [V, F]);
 
                 var t = [0, 0, 0];
-                var y = 0.05;
-                var z = 0;
-            }
-            if(i == 1){
-                id = "mercury";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .1, 48, 24);
-
-                const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/mercury.jpg",
-                });
-
-                uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [2.25, 0, 0];
-                var y = 0.05;
-                var z = 0;
-            }
-            if(i == 2){
-                id = "venus";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .16, 48, 24);
-
-                const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/venus.jpg",
-                });
-
-                uniforms.u_lightColor = [.8, 1, 1, 1];
-                uniforms.u_ambient = [0.6, 0.6, 0.6, 0];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [2.8, 0, 0];
-                var y = 0.02;
-                var z = 0;
-            }
-            if(i == 3){
-                id = "earth";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .2, 48, 24);
-
-                const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/world.jpg",
-                });
-
-                uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.5, 0.5, 0.5, 0];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [3.5, 0, 0];
-                var y = 0.01;
-                var z = 0;
-            }
-            if(i == 4){
-                id = "moon";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .03, 48, 24);
-
-                const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/moon.jpg",
-                });
-
-                uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [3.5, 0, 0];
-                var y = 0.01;
-                var z = 0;
-            }
-            if(i == 5){
-                id = "mars";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .16, 48, 24);
-
-                const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/mars.jpg",
-                });
-
-                uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.5, 0.5, 0.5, 0];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [4.3, 0, 0];
-                var y = 0.005;
-                var z = 0;
-            }
-            if(i == 6){
-                id = "saturn";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .5, 48, 24);
-
-                const tex = twgl.createTexture(gl, {
-                    min: gl.NEAREST,
-                    mag: gl.NEAREST,
-                    src:"textures/saturn.jpg",
-                });
-
-                uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.4, 0.4, 0.4, 0];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [6, 0, 0];
-                var y = 0.001;
-                var z = 0;
-            }
-            if(i == 7){
-                id = "saturn_rings";
-                programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
-                bufferInfo = twgl.primitives.createPlaneBufferInfo(gl, 2,2);
-
-                const tex = twgl.createTexture(gl, {
-                    mag: gl.NEAREST,
-                    min: gl.NEAREST,
-                    src:"textures/saturn_rings.png",
-                });
-
-                uniforms.u_lightColor = [1, 1, 1, 1];
-                uniforms.u_ambient = [0.5, 0.5, 0.5, 1];
-                uniforms.u_specular = [1, 1, 1, 1];
-                uniforms.u_shininess = 50;
-                uniforms.u_specularFactor = 0.1;
-                uniforms.u_diffuse = tex;
-
-                var t = [6, 0, 0];
-                var y = 0.001;
-                var z = 0;
-            }
-            if(i == 8){
-                id = "background";
-                programInfo = twgl.createProgramInfo(gl, ["vs-b", "fs-b"]);
-                bufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
-
-                uniforms = {
-                    u_skybox: twgl.createTexture(gl, {
-                        target: gl.TEXTURE_CUBE_MAP,
-                        src: [
-                        'textures/background/bkg1_right.png',
-                        'textures/background/bkg1_left.png',
-                        'textures/background/bkg1_top.png',
-                        'textures/background/bkg1_bot.png',
-                        'textures/background/bkg1_front.png',
-                        'textures/background/bkg1_back.png',
-                        ],
-                    }),
-                    
-                    u_viewDirectionProjectionInverse: viewDirectionProjectionInverse,
-                };
-                var t = [0,0,0];
                 var y = 0;
                 var z = 0;
-            }
 
-            drawObjects.push({
-                programInfo: programInfo,
-                bufferInfo: bufferInfo,
-                uniforms: uniforms,
-            });
-            objects.push({
-                ID: id,
-                translation: t,
-                ySpeed: y,
-                zSpeed: z,
-                uniforms: uniforms,
-            });
-        };   
+                switch(i){
+                    case 0:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 4.71,64,0,4.68);
+                        break;
+                    case 1:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 5.51,64,0,5.48);
+                        break;
+                    case 2:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 6.21,64,0,6.18);
+                        break;
+                    case 3:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 0.31,64,0,0.30);
+                        var t = [6.2, 0, 0];
+                        var y = 0.01;
+                        break;
+                    case 4:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 7.01,64,0,6.98);
+                        break;
+                    case 5:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 10.01,64,0,9.98);
+                        break;
+                    case 6:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 12.51,64,0,12.48);
+                        break;
+                    case 7:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 15.01,64,0,14.98);
+                        break;
+                    case 8:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 17.01,64,0,16.98);
+                        break;
+                    case 9:
+                        bufferInfo = twgl.primitives.createDiscBufferInfo(gl, 18.01,64,0,17.99);
+                        break;
+                }
+
+                drawObjects.push({
+                    programInfo: programInfo,
+                    bufferInfo: bufferInfo,
+                    uniforms: uniforms,
+                });
+                objects.push({
+                    ID: id,
+                    translation: t,
+                    ySpeed: y,
+                    zSpeed: z,
+                    uniforms: uniforms,
+                });
+            };   
+        }
+
+        function asteroids(){
+            for(let i = 0; i < numAst; i++){
+                var programInfo;
+                var bufferInfo;
+                var id;
+
+                const tex = twgl.createTexture(gl, {
+                    min: gl.NEAREST,
+                    mag: gl.NEAREST,
+                    src: [
+                        255, 255, 255, 255,
+                        255, 255, 255, 255,
+                        255, 255, 255, 255,
+                        255, 255, 255, 255,
+                    ],
+                });
+
+                var uniforms = {
+                    u_lightWorldPos: [0, 0, 0],
+                    u_lightColor: [1, 0.8, 0.8, 1],
+                    u_ambient: [0.01, 0.008, 0.008, 1],
+                    u_specular: [1, 1, 1, 1],
+                    u_shininess: 50,
+                    u_specularFactor: 1,
+                    u_diffuse: tex,
+
+                    u_viewInverse: m4.identity(),
+                    u_world: m4.identity(),
+                    u_worldInverseTranspose: m4.identity(),
+                    u_worldViewProjection: m4.identity(),
+
+                    u_lightMode: lightMode,
+                };
+                
+                id = "asteroid";
+                programInfo = twgl.createProgramInfo(gl, [V, F]);
+                bufferInfo = twgl.primitives.createSphereBufferInfo(gl, .0008, 8, 4);
+
+                var t = [rndNum(-400,400)*rndFloat(0.0001,0.1), rndNum(-400,400)*rndFloat(0.0001,0.1), rndNum(-400,400)*rndFloat(0.0001,0.1)];
+                var y = rndNum(-400,400)*rndFloat(0.0001,0.1);
+                var z = rndNum(-400,400)*rndFloat(0.0001,0.1);
+
+                drawObjects.push({
+                    programInfo: programInfo,
+                    bufferInfo: bufferInfo,
+                    uniforms: uniforms,
+                });
+                objects.push({
+                    ID: id,
+                    translation: t,
+                    ySpeed: y,
+                    zSpeed: z,
+                    uniforms: uniforms,
+                });
+            };   
+        }
+
+        function rndNum(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function rndFloat(min, max){
+            return (Math.random() * (max - min) + 0.0020).toFixed(4);
+        }
         
-        //gl.clearColor(0.1, 0.1, 0.1, 1);  // backgrounds
+        //gl.clearColor(0.1, 0.1, 0.1, 1);  // background color
 
         let timeScale = 1000;
         const timeElem = document.querySelector("#time");
@@ -533,35 +1034,16 @@
 
             const fov = 40 * Math.PI / 180;
             const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-            const zNear = 0.5;
+            const zNear = 0.1;
             const zFar = 100;
             const projection = m4.perspective(fov, aspect, zNear, zFar);
-			
-			var cameraAngleRadiansX = cameraAngleDX * Math.PI / 180;
-			var cameraAngleRadiansY = cameraAngleDY * Math.PI / 180;
-			
-			var cameraMatrix = m4.rotationY(cameraAngleRadiansX);
-			cameraMatrix = m4.rotateX(cameraMatrix, cameraAngleRadiansY);
-			cameraMatrix = m4.translate(cameraMatrix, 0, 0, 10);
- 
- 
-			console.log("START");
-			for(let iter = 0; iter < cameraMatrix.length; ++iter){
-				console.log(cameraMatrix[iter]);
-			}
- 
-			// Get the camera's position from the matrix we computed
-			var cameraPosition = [
-				cameraMatrix[12],
-				cameraMatrix[13],
-				cameraMatrix[14],
-			];
 
-            
+            const eye = [eyeV[0][0], eyeV[1][0], eyeV[2][0]];
             const target = [tar[0][0], tar[1][0], tar[2][0]];
-            const up = [0, 1, 0];
+            //const up = [0, 1, 0];
+            const up = [xUp, yUp, 0];
 
-            const camera = m4.lookAt(cameraPosition, target, up);
+            const camera = m4.lookAt(eye, target, up);
             const view = m4.inverse(camera);
             const viewProjection = m4.multiply(projection, view);
 
@@ -570,6 +1052,7 @@
             uniforms.u_worldInverseTranspose = m4.transpose(m4.inverse(world));
             uniforms.u_worldViewProjection = m4.multiply(viewProjection, world);*/
 
+            var counter = 1;
             objects.forEach(function(obj) {
                 if(obj.ID == "background"){
                     //depth test thingy (?)
@@ -588,39 +1071,64 @@
 
                     const uni = obj.uniforms;
                     const world = uni.u_world;
+
                     m4.identity(world);
-                    m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
-                    m4.translate(world, obj.translation, world);//position
-                    if (obj.ID == "venus"){
-                        m4.rotateY(world, time * obj.ySpeed * -5, world);//inverse rotation from venus's axis
+                    if (obj.ID == "asteroid"){
+                        m4.rotateY(world, counter *0.05, world);//translation around the sun
+                        m4.translate(world, [(7.6 + counter*0.0004),0,0], world);//position
+                        m4.rotateY(world, obj.ySpeed, world);
+                        m4.rotateZ(world, obj.zSpeed, world);
+                        m4.scale(world,obj.translation,world);
+                        counter++;
                     }
-                    if (obj.ID == "earth"){
-                        m4.rotateZ(world, .2, world);//earth's weird angle
-                        m4.rotateY(world, time * obj.ySpeed * 1000, world);//rotation from earth's axis
-						if(earthTarget == true){
-							var currT = v3.create();
-							m4.getTranslation(world,currT);
-							tar[0][0] = currT[0];
-							tar[1][0] = currT[1];
-							tar[2][0] = currT[2];
-						}
+                    else{
+                        m4.rotateY(world, time * obj.ySpeed, world);//translation around the sun
+                        m4.translate(world, obj.translation, world);//position
+                        if (obj.ID == "venus"){
+                            m4.rotateY(world, time * -0.1, world);//inverse rotation from venus's axis
+                        }
+                        if (obj.ID == "earth"){
+                            m4.rotateZ(world, .2, world);//earth's weird angle
+                            m4.rotateY(world, time * 10, world);//rotation from earth's axis
+                            if(earthTarget == true){
+                                var currT = v3.create();
+                                m4.getTranslation(world,currT);
+                                tar[0][0] = currT[0];
+                                tar[1][0] = currT[1];
+                                tar[2][0] = currT[2];
+                            }
+                        }
+                        if (obj.ID == "moon"){//this makes the moon's orbit around earth
+                            m4.rotateY(world, time * 0.25, world);
+                            m4.translate(world, [.3,0,0], world);
+                        }
+                        if (obj.ID == "mars"){
+                            m4.rotateY(world, time * 9, world);//rotation from mars's axis
+                        }
+                        if (obj.ID == "jupiter"){
+                            m4.rotateY(world, time * 22, world);//rotation from jupiter's axis
+                        }
+                        if (obj.ID == "saturn"){
+                            m4.rotateX(world, -.2, world);//adding and alge
+                            m4.rotateY(world, time * 18, world);//rotation from saturn's axis
+                        }
+                        if (obj.ID == "saturn_rings"){
+                            m4.rotateX(world, -.2, world);//adding and angle to the rinds
+                            m4.rotateY(world, time * 18, world);//rotation from saturn's axis
+                        }
+                        if (obj.ID == "uranus"){
+                            m4.rotateY(world, time * -13, world);//rotation from uranus's axis
+                        }
+                        if (obj.ID == "uranus_rings"){
+                            //m4.rotateX(world, -.5, world);//adding and angle to the rinds
+                            m4.rotateZ(world, -1.7, world);
+                            m4.rotateY(world, time * 18, world);//rotation from saturn's axis
+                        }
+                        if (obj.ID == "neptune"){
+                            m4.rotateY(world, time * 15, world);//rotation from neptune's axis
+                        }
+                        m4.rotateZ(world, time * obj.zSpeed, world);
                     }
-                    if (obj.ID == "mars"){
-                        m4.rotateY(world, time * obj.ySpeed * 2000, world);//rotation from mars's axis
-                    }
-                    if (obj.ID == "moon"){//this makes the moon's orbit around earth
-                        m4.rotateY(world, time * obj.ySpeed * 25, world);
-                        m4.translate(world, [.3,0,0], world);
-                    }
-                    if (obj.ID == "saturn"){
-                        m4.rotateX(world, -.2, world);//adding and alge to the rinds
-                        m4.rotateY(world, time * obj.ySpeed * 500, world);//rotation from saturn's axis
-                    }
-                    if (obj.ID == "saturn_rings"){
-                        m4.rotateX(world, -.2, world);//adding and alge to the rinds
-                        m4.rotateY(world, time * obj.ySpeed * 500, world);//rotation from saturn's axis
-                    }
-                    m4.rotateZ(world, time * obj.zSpeed, world);
                     //m4.rotateX(world, time, world);
                     m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
                     m4.multiply(viewProjection, uni.u_world, uni.u_worldViewProjection);
@@ -629,9 +1137,7 @@
 
             twgl.drawObjectList(gl, drawObjects);
 
-
-
-            requestAnimationFrame(render);
+            id_Render = requestAnimationFrame(render);
         }
         requestAnimationFrame(render);
     </script>
