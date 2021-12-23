@@ -1043,9 +1043,9 @@
             //const up = [0, 1, 0];
 			var up;
 			if(eye[3] < 0){
-				up = [0, 1, 0];
-			}else{
 				up = [0, 0, 0];
+			}else{
+				up = [0, 1, 0];
 			}
             const camera = m4.lookAt(eye, target, up);
             const view = m4.inverse(camera);
